@@ -5,6 +5,8 @@ import java.awt.event.ActionListener;
 import java.awt.*;
 
 import javax.swing.*;
+
+import Teste2;
 public class Teste{
     public static class Myframe extends JFrame{
         public Myframe(){
@@ -31,7 +33,6 @@ public class Teste{
             int w = this.getWidth();
             int h = this.getHeight();
             compress.setSize(110,23);
-            System.out.println(w+" , "+h);
             decompress.setSize(110, 23);
             exit.setSize(50,30);
             compress.setLocation(w/2-compress.getWidth()/2-decompress.getWidth(),h/2-compress.getHeight());
@@ -48,8 +49,8 @@ public class Teste{
             JOptionPane.showInternalMessageDialog(this, "ComB", "title", JOptionPane.INFORMATION_MESSAGE);
         }
         void DecompressPressed(ActionEvent e){
-            
-            JOptionPane.showInternalMessageDialog(this, "DecomB", "title", JOptionPane.INFORMATION_MESSAGE);
+            Teste2.HuffNode hn = new Teste2.HuffNode('*');
+            JOptionPane.showInternalMessageDialog(this, hn.toString(), "title", JOptionPane.INFORMATION_MESSAGE);
         }
         void exit(ActionEvent e){
             System.exit(0);
