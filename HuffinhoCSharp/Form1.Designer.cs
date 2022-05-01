@@ -19,17 +19,26 @@
             }
             base.Dispose(disposing);
         }
-        FileDialog chooser;
-        string filepath;
+        private string filepath;
+        private OpenFileDialog openFileDialog;
+        private Button snder = null;
+        private bool cancel = false;
         private void dialogMethod() {
-            var res = chooser.ShowDialog();
-            if (res == DialogResult.OK) { filepath = chooser.FileName; }
+            openFileDialog.Filter = "All Files (*.*)|*.*";
+            openFileDialog.RestoreDirectory = true;
+            if (openFileDialog.ShowDialog() == DialogResult.OK){
+                filepath = openFileDialog.FileName;
+                snder = null;
+                cancel = false;
+            }
+            else cancel= true;
         }
         private void dialogThreadCreate() {
             Thread dialogThread = new Thread(new ThreadStart(dialogMethod));
             dialogThread.SetApartmentState(ApartmentState.STA);
             dialogThread.Start();
         }
+        
         #region Windows Form Designer generated code
 
         /// <summary>
@@ -40,161 +49,68 @@
         {
             this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(300, 200);
+            this.ClientSize = new System.Drawing.Size(250, 150);
+            this.MaximizeBox = false;
             this.Text = "Huffinho";
             this.Icon = new Icon("Cs.ico");
             this.c = new Button();
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             d = new Button();
             e = new Button();
             bar = new ProgressBar();
-            bar.Style = ProgressBarStyle.Continuous;
+            bar.Style = ProgressBarStyle.Blocks;
             bar.Size = new Size(100, 23);
-            c.Size = new System.Drawing.Size(75, 23);
-            d.Size = new System.Drawing.Size(75, 23);
-            e.Size = new System.Drawing.Size(75, 23);
+            c.Size = new System.Drawing.Size(80, 23);
+            d.Size = new System.Drawing.Size(80, 23);
+            e.Size = new System.Drawing.Size(60, 23);
             c.Text = "Compress";
             d.Text = "Decompress";
             e.Text = "Exit";
-            c.Location = new System.Drawing.Point(this.Width / 2 - c.Width / 2 - d.Width, this.Height / 2 - c.Height / 2);
-            d.Location = new System.Drawing.Point(this.Width / 2 + d.Width / 2, this.Height / 2 - d.Height / 2);
-            e.Location = new System.Drawing.Point(this.Width - e.Width - 16, this.Height - e.Width + 13);
-            bar.Location = new Point(this.Width / 2-bar.Width/2, this.Height / 2 + bar.Height);
+            c.Location = new System.Drawing.Point(this.Width / 2 - c.Width / 2 - d.Width, this.Height / 2 - c.Height*2);
+            d.Location = new System.Drawing.Point(this.Width / 2 + d.Width / 2, this.Height / 2 - d.Height*2);
+            e.Location = new System.Drawing.Point(this.Width - e.Width - 16, this.Height - e.Width);
+            bar.Location = new Point(this.Width / 2-bar.Width/2, this.Height / 2 + bar.Height/2);
             bar.Maximum = 100;
             c.Click += new EventHandler(compressClick);
             d.Click += new EventHandler(decompressClick);
             e.Click += new EventHandler(exitClick);
+            Paint += new PaintEventHandler(to_paint);
             this.Controls.Add(c);
             this.Controls.Add(d);
             this.Controls.Add(e);
             this.Controls.Add(bar);
-            chooser = new OpenFileDialog();
-            chooser.Filter = "All Files (*.*)|*.*";
-            filepath = "";
+            openFileDialog = new();
+            openFileDialog.InitialDirectory = "C:\\";
+        }
+        void to_paint(object sender,PaintEventArgs e){
+            e.Graphics.DrawIcon(this.Icon,new Rectangle(0,0,this.Width-16,this.Height-38));
+            Font font = new Font("Arial", 10, GraphicsUnit.Pixel);
+            Rectangle rec = new Rectangle(this.Width / 2 - 80, 0, 160, 12);
+            e.Graphics.DrawRectangle(Pens.AntiqueWhite,rec);
+            e.Graphics.DrawString("O que quer fazer com o arquivo?", font, Brushes.Black,rec);
+            rec.Y = bar.Location.Y - 13;
+            rec.Width = 55;
+            rec.X = bar.Location.X + 25;
+            e.Graphics.DrawRectangle(Pens.NavajoWhite, rec);
+            e.Graphics.DrawString("Progresso:", font, Brushes.Black, rec);
+
         }
         private void exitClick(object sender,EventArgs e){
-            Dispose();
+            Dispose(true);
         }
-        private void print_byte(byte b){
-            string s = "";
-            for (int i = 7; i >= 0; i--) {
-                if (Program.isBitSet((ushort)b, i)) s += '1';
-                else s += '0';
-            }
-            MessageBox.Show(s);
-        }
-        Structures.HuffTree createTree(FileStream file,byte b){
-            Structures.HuffTree tree = new Structures.HuffTree(b);
-            if (b == '\\') tree.Byte = (byte)file.ReadByte();
-            if (b == '*'){
-                tree.Left = createTree(file, (byte)file.ReadByte());
-                tree.Right = createTree(file, (byte)file.ReadByte());
-            }
-            return tree;
-        }
+        
         private void decompressClick(object sender, EventArgs e){
-            try{
-                dialogThreadCreate();
-                long seconds = DateTime.Now.Ticks / TimeSpan.TicksPerSecond;
-                while (filepath == "") { if ((DateTime.Now.Ticks / TimeSpan.TicksPerSecond) - seconds == 30) throw new Exception(); }
-                FileStream infile = new FileStream(filepath, FileMode.Open);
-                FileStream outfile = new FileStream(filepath.Substring(0, filepath.Length - 5), FileMode.Create);
-                filepath = "";
-                byte f_byte = (byte)infile.ReadByte();
-                byte s_byte = (byte)infile.ReadByte();
-                ushort trash_size, tree_size;
-                trash_size = ((ushort)(f_byte >> 5));
-                tree_size = ((byte)(((f_byte << 8)<<3)>>3)) ;
-                tree_size |= s_byte;
-                Structures.HuffTree tree = createTree(infile, (byte)infile.ReadByte());
-                var tmptree = tree;
-                while (infile.Position < infile.Length){
-                    byte b = (byte)infile.ReadByte();
-                    if (infile.Position < infile.Length) {
-                        for (int pos = 7; pos >= 0; pos--) {
-                            if (tmptree.isLeaf()){
-                                outfile.WriteByte(tmptree.Byte);
-                                tmptree = tree;
-                            }if (Program.isBitSet((ushort)b, pos)) tmptree = tmptree.Right;
-                            else tmptree = tmptree.Left;
-                        }
-                    } else{
-                            for (int pos = 7; pos >= trash_size; pos--) {
-                            if (tmptree.isLeaf()) {
-                                outfile.WriteByte(tmptree.Byte);
-                                tmptree = tree;
-                            }if(Program.isBitSet((ushort)b,pos)) tmptree= tmptree.Right;
-                            else tmptree = tmptree.Left;
-                        }if (tmptree.isLeaf()) {
-                            outfile.WriteByte(tmptree.Byte);
-                            tmptree = tree;
-                        }
-                    }
-                    bar.Value = (int)(infile.Position * 100 / infile.Length);
-                }
-                MessageBox.Show("Decompress Complete");
-                bar.Value = 0;
-                outfile.Close();
-                infile.Close();
-            }
-            catch(Exception ex) { MessageBox.Show(ex.Message); }
+            snder = (Button)sender;
+            dialogThreadCreate();
+            while (snder != null && !cancel) ;
+            if (!cancel) Decompress.Instance.dohuffman(ref filepath, bar);
+
         }
         private void compressClick(object sender, EventArgs e) {
-            try{
-                dialogThreadCreate();
-                long seconds = DateTime.Now.Ticks / TimeSpan.TicksPerSecond;
-                while (filepath == "") { if ((DateTime.Now.Ticks / TimeSpan.TicksPerSecond) - seconds == 30) throw new Exception(); }
-                FileStream infile = new FileStream(filepath, FileMode.Open);
-                FileStream outfile = new FileStream(filepath + ".huff", FileMode.Create);
-                ulong[] freq = new ulong[256];
-                while (infile.Position < infile.Length){
-                    byte b = (byte)infile.ReadByte();
-                    freq[b]++;
-                }
-                Structures.Heap hipi = new Structures.Heap();
-                for (short b = 0; b < 256; b++) if (freq[b] != 0) hipi.enqueue(new Structures.HuffTree((byte)b, freq[b]));
-                Structures.HuffTree tree = hipi.HTFromHeap();
-                outfile.WriteByte((byte)0);
-                outfile.WriteByte((byte)0);
-                string treestr = tree.ToString();
-                for (int i = 0; i < treestr.Length; i++) outfile.WriteByte((byte)treestr[i]);
-                Structures.HashTable hash = new Structures.HashTable();
-                tree.newByteValues(hash, (byte)0, (ushort)0);
-                infile.Position = 0;
-                byte w_byte = 0;
-                byte to_shift = 7;
-                while (infile.Position < infile.Length) {
-                    byte b = (byte)infile.ReadByte();
-                    Structures.Element el = hash[b];
-                    ushort n_value = el.HuffValue;
-                    short n_tam = (short)el.Size;
-                    while (n_tam > -1){
-                        if (Program.isBitSet(n_value, n_tam)) w_byte = Program.setBit(w_byte, to_shift);
-                        if (to_shift == 0){
-                            outfile.WriteByte(w_byte);
-                            to_shift = 7;
-                            w_byte = 0;
-                        }
-                        else to_shift--;
-                        n_tam--;
-                    }
-                    bar.Value = (int)(infile.Position * 100 / infile.Length);
-                }
-                int trash = (to_shift+1) % 8;
-                if (trash != 0) outfile.WriteByte(w_byte);
-                MessageBox.Show("Compression Complete");
-                outfile.Position = 0;
-                int t_size = 0;
-                Structures.HuffTree.tsize(tree, ref t_size);
-                byte[] header = new byte[2];
-                header[0] = (byte)(trash << 5 | t_size>>8);
-                header[1] = (byte)(t_size);
-                outfile.WriteByte(header[0]);
-                outfile.WriteByte(header[1]);
-                outfile.Close();
-                infile.Close();
-                bar.Value = 0;
-                filepath = "";
-            }catch(Exception ex) { MessageBox.Show(ex.Message); }
+            snder = (Button)sender;
+            dialogThreadCreate();
+            while (snder != null && !cancel) ;
+            if (!cancel) Compress.Instance.dohuffman(ref filepath, bar);
         }
         private ProgressBar bar;
         private Button c, d, e;

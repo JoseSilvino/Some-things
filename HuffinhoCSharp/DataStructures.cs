@@ -25,7 +25,7 @@ namespace HuffinhoCSharp{
         public class HuffTree{
             private byte b;
             private System.UInt64 frequency;
-            private HuffTree left,right;
+            private HuffTree? left,right;
             /// <summary>
             /// Construtor da classe
             /// </summary>
@@ -33,7 +33,7 @@ namespace HuffinhoCSharp{
             /// <param name="frequency"></param>
             /// <param name="left"></param>
             /// <param name="right"></param>
-            public HuffTree(byte b,UInt64 frequency,HuffTree left,HuffTree right){
+            public HuffTree(byte b,UInt64 frequency,HuffTree? left,HuffTree? right){
                 this.b = b;
                 this.frequency = frequency;
                 this.left = left;
@@ -71,11 +71,11 @@ namespace HuffinhoCSharp{
             /// <summary>
             /// Getter e Setter para o nó filho da esquerda
             /// </summary>
-            public HuffTree Left { get { return left; } set { left = value; } }
+            public HuffTree? Left { get { return left; } set { left = value; } }
             /// <summary>
             /// Getter e Setter para o nó filho da direita
             /// </summary>
-            public HuffTree Right { get { return right; } set { right = value; } }
+            public HuffTree? Right { get { return right; } set { right = value; } }
             /// <summary>
             /// Função que retorna se o nó é uma folha
             /// </summary>
@@ -86,7 +86,7 @@ namespace HuffinhoCSharp{
             /// </summary>
             /// <param name="tree"></param>
             /// <param name="size"></param>
-            public static void tsize(HuffTree tree,ref int size){
+            public static void tsize(HuffTree? tree,ref int size){
                 if (tree != null){
                     size++;
                     if(tree.leaf_abar_mul()) size++;
@@ -128,14 +128,14 @@ namespace HuffinhoCSharp{
             /// <param name="a"></param>
             /// <param name="b"></param>
             /// <returns></returns>
-            public static bool operator <(HuffTree a,HuffTree b) { return a.frequency < b.frequency; }
+            public static bool operator <(HuffTree? a,HuffTree? b) { return (a == null || b == null) ? false : a.frequency < b.frequency; }
             /// <summary>
             /// Operador '>'
             /// </summary>
             /// <param name="a"></param>
             /// <param name="b"></param>
             /// <returns></returns>
-            public static bool operator >( HuffTree a,HuffTree b) { return a.frequency > b.frequency; }
+            public static bool operator >( HuffTree? a,HuffTree? b) { return (a == null || b == null) ? false : a.frequency > b.frequency; }
         }
         /// <summary>
         /// Implementação do elemento que fica guardado na Hash table
@@ -161,7 +161,7 @@ namespace HuffinhoCSharp{
         /// Implementação da fila de prioridade no algoritmo de Huffman
         /// </summary>
         public class Heap{
-            private HuffTree[] heap;
+            private HuffTree?[] heap;
             private int heap_size;
             private readonly int max_size = 256;
             /// <summary>
@@ -175,7 +175,7 @@ namespace HuffinhoCSharp{
             /// </summary>
             /// <param name="index"></param>
             /// <returns></returns>
-            public HuffTree this[int index] { get { return heap[index]; } set { heap[index] = value; } }
+            public HuffTree? this[int index] { get { return heap[index]; } set { heap[index] = value; } }
             /// <summary>
             /// Getter e Setter do tamanho atual da heap
             /// </summary>
@@ -206,9 +206,9 @@ namespace HuffinhoCSharp{
             /// Dequeue da fila de prioridade
             /// </summary>
             /// <returns></returns>
-            public HuffTree dequeue(){
+            public HuffTree? dequeue(){
                 if (heap_size != 0) {
-                    HuffTree deq = heap[1];
+                    HuffTree? deq = heap[1];
                     heap[1] = heap[heap_size--];
                     heapify(1);
                     return deq;
@@ -236,12 +236,12 @@ namespace HuffinhoCSharp{
             /// Cria uma árvore de Huffman a partir da fila de prioridade
             /// </summary>
             /// <returns></returns>
-            public HuffTree HTFromHeap(){
-                HuffTree a, b, aux;
+            public HuffTree? HTFromHeap(){
+                HuffTree? a, b, aux;
                 while (Size > 1){
                     a = dequeue();
                     b = dequeue();
-                    aux = new HuffTree((byte)'*', a.Frequency + b.Frequency, a, b);
+                    aux = new HuffTree((byte)'*',((a==null)?0: a.Frequency) + ((b==null)?0:b.Frequency), a, b);
                     enqueue(aux);
                 }
                 return dequeue();
@@ -249,11 +249,18 @@ namespace HuffinhoCSharp{
             public override string ToString(){
                 string s = "[";
                 for (int i = 1; i < heap_size; i++){
+#pragma warning disable CS8602 // Desreferência de uma referência possivelmente nula.
                     s += "{ " + i + ' ' + heap[i].Byte + " , " + heap[i].Frequency + "}";
+#pragma warning restore CS8602 // Desreferência de uma referência possivelmente nula.
                     if (i < heap_size - 1) s += ',';
                 }
                 return s+']';
             }
+        }
+        public abstract class HuffmanCode
+        {
+            public abstract void dohuffman(ref string filepath, ProgressBar bar);
+
         }
     }
 }
